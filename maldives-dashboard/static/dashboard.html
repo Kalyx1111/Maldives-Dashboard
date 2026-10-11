@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MALDIVES DASHBOARD &mdash; OSINT Snapshot</title>
+<style>:root{
+  --bg:#080b11; --bg2:#0a0f18;
+  --panel:#0f1826; --panel2:#0c1420;
+  --border:#1c2942; --border-soft:#161f30;
+  --text:#e7ecf5; --text-dim:#8b9bb4; --text-faint:#54607a;
+  --gold:#c9a35c; --gold-soft:#8a774a;
+  --amber:#ff9a4d; --red:#ef5354; --cyan-h:#58c4ff;
+  --violet:#a98bff; --green:#5fc48d; --magenta:#ff5fa2;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;}
+body{background:
+  radial-gradient(1200px 600px at 85% -10%, rgba(88,196,255,0.05), transparent 60%),
+  radial-gradient(1000px 500px at -10% 20%, rgba(201,163,92,0.05), transparent 55%),
+  var(--bg);
+  min-height:100vh;
+}
+a{color:inherit;}
+::selection{background:rgba(201,163,92,0.35);}
+.wrap{max-width:1500px;margin:0 auto;padding:16px 16px 40px;}
+
+.hdr{display:flex;align-items:center;gap:14px;padding:10px 6px 18px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand svg{display:block;}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;}
+.brand-title{font-size:19px;font-weight:800;letter-spacing:0.09em;text-transform:uppercase;color:var(--text);}
+.brand-sub{font-size:11px;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase;margin-top:3px;}
+.search-wrap{flex:1;min-width:180px;max-width:400px;position:relative;}
+.search-wrap input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:999px;
+  padding:10px 16px 10px 38px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;}
+.search-wrap input::placeholder{color:var(--text-faint);}
+.search-wrap input:focus{border-color:var(--gold-soft);box-shadow:0 0 0 3px rgba(201,163,92,0.12);}
+.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:0.55;}
+.hdr-right{display:flex;align-items:center;gap:12px;margin-left:auto;flex-wrap:wrap;}
+.hdr-clock{font-family:var(--mono);font-size:12px;color:var(--text-dim);text-align:right;line-height:1.3;white-space:nowrap;}
+.hdr-clock b{color:var(--text);display:block;font-size:13px;}
+
+.window-toggle{display:flex;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:2px;}
+.wt-btn{background:none;border:none;color:var(--text-faint);font-size:11px;font-weight:700;padding:6px 12px;
+  border-radius:6px;cursor:pointer;letter-spacing:.02em;}
+.wt-btn.active{background:var(--gold);color:#1a1408;}
+.wt-btn:not(.active):hover{color:var(--text);}
+
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--gold));}
+.kpi .eyebrow{font-size:10px;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-faint);font-weight:700;}
+.kpi .num{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--text);margin-top:6px;letter-spacing:-0.01em;}
+.kpi .num span{font-size:15px;color:var(--text-dim);font-weight:500;}
+.kpi .sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+.main-grid{display:block;}
+.left-col{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.panel-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;display:flex;flex-direction:column;min-width:0;}
+.panel-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
+.panel-dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px 1px currentColor;}
+.panel-title{font-size:12px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--text);}
+.panel-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-faint);
+  background:var(--panel2);border:1px solid var(--border-soft);border-radius:5px;padding:1px 7px;}
+.panel-items{display:flex;flex-direction:column;gap:11px;overflow-y:auto;max-height:420px;}
+.item{border-left:2px solid var(--border-soft);padding-left:10px;}
+.item .lbl{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.item .txt{font-size:12px;line-height:1.5;color:var(--text-dim);}
+.item .meta{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:4px;}
+.item a{color:var(--gold-soft);text-decoration:none;}
+
+.map-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;position:relative;}
+.map-panel .panel-hd{margin-bottom:8px;}
+.map-svg-wrap{position:relative;width:100%;border-radius:8px;overflow:hidden;background:#060a10;
+  border:1px solid var(--border-soft);}
+.map-svg-wrap svg{display:block;width:100%;height:auto;}
+.map-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:10.5px;color:var(--text-dim);}
+.map-legend span{display:inline-flex;align-items:center;gap:5px;}
+.map-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.map-tip{position:absolute;pointer-events:none;background:#0b1120;border:1px solid var(--gold-soft);
+  border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;max-width:260px;color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;
+  z-index:40;}
+.map-tip.show{opacity:1;transform:translateY(0);}
+.map-tip .t-name{font-weight:800;font-size:12px;margin-bottom:3px;}
+.map-tip .t-meta{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:5px;}
+.marker circle.pulse{animation:pulse 2.4s ease-out infinite;}
+.marker circle.core{filter:drop-shadow(0 0 3px currentColor);}
+.marker{cursor:pointer;}
+@keyframes pulse{0%{r:5;opacity:0.55;}70%{r:15;opacity:0;}100%{r:15;opacity:0;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;
+  font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--border);
+  text-transform:uppercase;white-space:nowrap;}
+.status-pill.live{color:var(--green);border-color:rgba(95,196,143,.35);background:rgba(95,196,143,.08);}
+.status-pill.offline{color:var(--amber);border-color:rgba(255,154,77,.35);background:rgba(255,154,77,.08);}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.status-pill.live .dot{animation:blink 1.6s ease-in-out infinite;}
+.refresh-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:7px 12px;font-size:11px;font-family:var(--sans);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;}
+.refresh-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-btn.spinning svg{animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.icon-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;}
+.icon-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+
+.offline-banner{display:none;background:rgba(255,154,77,.10);border:1px solid rgba(255,154,77,.35);
+  color:#ffbf8a;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.offline-banner.show{display:block;}
+.offline-banner b{color:#fff;}
+.connector-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.conn-badge{font-family:var(--mono);font-size:9.5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border-soft);
+  color:var(--text-faint);}
+.conn-badge.ok{color:var(--green);border-color:rgba(95,196,143,.3);}
+.conn-badge.err{color:var(--red);border-color:rgba(239,83,84,.3);}
+.conn-badge.off{color:var(--text-faint);}
+.empty-note{font-size:11.5px;color:var(--text-faint);font-style:italic;padding:6px 0;}
+.infra-note{font-size:9.5px;color:var(--text-faint);margin-top:8px;padding-top:8px;
+  border-top:1px solid var(--border-soft);line-height:1.5;}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(4,6,10,.7);display:none;align-items:center;
+  justify-content:center;z-index:100;padding:20px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;
+  max-width:460px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal h3{margin:0 0 4px;font-size:15px;color:var(--text);}
+.modal .modal-sub{font-size:11.5px;color:var(--text-faint);margin-bottom:16px;line-height:1.5;}
+.modal label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);margin:10px 0 4px;}
+.modal input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:9px 11px;color:var(--text);font-size:12px;font-family:var(--mono);outline:none;}
+.modal input:focus{border-color:var(--gold-soft);}
+.key-field{margin-bottom:16px;}
+.key-field label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);margin:0 0 4px;}
+.key-field .kf-status{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
+.key-field .kf-status.on{background:var(--green);box-shadow:0 0 6px 1px var(--green);}
+.key-field .kf-help{font-size:10.5px;color:var(--text-faint);margin-bottom:6px;}
+.modal-actions{display:flex;gap:10px;margin-top:18px;align-items:center;}
+.btn-primary{background:var(--gold);color:#1a1408;border:none;border-radius:8px;padding:10px 18px;
+  font-size:12px;font-weight:700;cursor:pointer;}
+.btn-primary:hover{opacity:.9;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:10px 18px;font-size:12px;cursor:pointer;}
+.modal-msg{font-size:11.5px;margin-top:12px;min-height:16px;}
+.modal-msg.ok{color:var(--green);}
+.modal-msg.err{color:var(--red);}
+.custom-marker-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:11px;
+  border-bottom:1px solid var(--border-soft);gap:8px;}
+.custom-marker-row button{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:15px;flex:none;}
+.custom-marker-row button:hover{color:var(--red);}
+
+.skel{background:linear-gradient(90deg,var(--panel2) 25%,#131f30 37%,var(--panel2) 63%);
+  background-size:400% 100%;animation:skel 1.4s ease infinite;border-radius:4px;}
+@keyframes skel{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.marker-tt-link{display:block;color:var(--gold);font-size:10px;margin-top:3px;text-decoration:none;}
+.map-body{display:grid;grid-template-columns:1fr 190px;gap:12px;align-items:start;}
+.layers-panel{background:#070a10;border:1px solid var(--border-soft);border-radius:8px;padding:10px;
+  display:flex;flex-direction:column;gap:2px;max-height:520px;overflow-y:auto;}
+.layers-hd{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text-faint);
+  font-weight:700;margin-bottom:6px;}
+.layer-toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);
+  padding:6px 4px;border-radius:5px;cursor:pointer;user-select:none;}
+.layer-toggle:hover{background:var(--panel2);color:var(--text);}
+.layer-toggle input{accent-color:var(--gold);width:13px;height:13px;flex:none;}
+.layer-toggle i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+@media (max-width:900px){.map-body{grid-template-columns:1fr;}}
+
+.dash-footer{margin-top:18px;padding:16px 4px 4px;border-top:1px solid var(--border-soft);
+  display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;align-items:baseline;
+  font-size:11px;color:var(--text-faint);}
+.dash-footer b{color:var(--text-dim);}
+.dash-footer .brandline{color:var(--gold-soft);font-weight:700;letter-spacing:0.03em;}
+
+.methodology{font-size:11.5px;color:var(--text-dim);line-height:1.6;}
+.methodology li{margin-bottom:6px;}
+.dim{opacity:0.28 !important;transition:opacity .2s;}
+
+@media (max-width:1180px){
+  .panel-row{grid-template-columns:repeat(2,1fr);}
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:700px){
+  .panel-row{grid-template-columns:1fr;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .hdr-clock{display:none;}
+}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  .live-dot,.marker circle.pulse{animation:none !important;}
+}
+
+/* ---------- live/offline status + refresh (new) ---------- */
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;
+  font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--border);
+  text-transform:uppercase;white-space:nowrap;}
+.status-pill.live{color:var(--green);border-color:rgba(95,196,143,.35);background:rgba(95,196,143,.08);}
+.status-pill.offline{color:var(--amber);border-color:rgba(255,154,77,.35);background:rgba(255,154,77,.08);}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.status-pill.live .dot{animation:blink 1.6s ease-in-out infinite;}
+.refresh-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:7px 12px;font-size:11px;font-family:var(--sans);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,color .15s;}
+.refresh-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-btn svg{transition:transform .5s;}
+.refresh-btn.spinning svg{animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.offline-banner{display:none;background:rgba(255,154,77,.10);border:1px solid rgba(255,154,77,.35);
+  color:#ffbf8a;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.offline-banner.show{display:block;}
+.offline-banner b{color:#fff;}
+.connector-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.conn-badge{font-family:var(--mono);font-size:9.5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border-soft);
+  color:var(--text-faint);}
+.conn-badge.ok{color:var(--green);border-color:rgba(95,196,143,.3);}
+.conn-badge.err{color:var(--red);border-color:rgba(239,83,84,.3);}
+.conn-badge.off{color:var(--text-faint);}
+.empty-note{font-size:11.5px;color:var(--text-faint);font-style:italic;padding:6px 0;}
+.infra-note{font-size:9.5px;color:var(--text-faint);margin-top:8px;padding-top:8px;
+  border-top:1px solid var(--border-soft);line-height:1.5;}
+
+/* ---------- settings modal (new) ---------- */
+.icon-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;transition:border-color .15s,color .15s;}
+.icon-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.modal-backdrop{position:fixed;inset:0;background:rgba(4,6,10,.7);display:none;align-items:center;
+  justify-content:center;z-index:100;padding:20px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;
+  max-width:480px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal h3{margin:0 0 4px;font-size:15px;color:var(--text);}
+.modal .modal-sub{font-size:11.5px;color:var(--text-faint);margin-bottom:18px;line-height:1.5;}
+.key-field{margin-bottom:16px;}
+.key-field label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.key-field .kf-status{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
+.key-field .kf-status.on{background:var(--green);box-shadow:0 0 6px 1px var(--green);}
+.key-field .kf-help{font-size:10.5px;color:var(--text-faint);margin-bottom:6px;}
+.key-field input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:9px 11px;color:var(--text);font-size:12px;font-family:var(--mono);outline:none;}
+.key-field input:focus{border-color:var(--gold-soft);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;align-items:center;}
+.btn-primary{background:var(--gold);color:#1a1408;border:none;border-radius:8px;padding:10px 18px;
+  font-size:12px;font-weight:700;cursor:pointer;}
+.btn-primary:hover{opacity:.9;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:10px 18px;font-size:12px;cursor:pointer;}
+.modal-msg{font-size:11.5px;margin-top:12px;min-height:16px;}
+.modal-msg.ok{color:var(--green);}
+.modal-msg.err{color:var(--red);}
+.skel{background:linear-gradient(90deg,var(--panel2) 25%,#131f30 37%,var(--panel2) 63%);
+  background-size:400% 100%;animation:skel 1.4s ease infinite;border-radius:4px;}
+@keyframes skel{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.marker-tt-link{display:block;color:var(--gold);font-size:10px;margin-top:3px;text-decoration:none;}
+
+/* ---------- map body: map + layer toggles side by side (new) ---------- */
+.map-body{display:grid;grid-template-columns:1fr 190px;gap:12px;align-items:start;}
+.layers-panel{background:#070a10;border:1px solid var(--border-soft);border-radius:8px;padding:10px;
+  display:flex;flex-direction:column;gap:2px;}
+.layers-hd{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text-faint);
+  font-weight:700;margin-bottom:6px;}
+.layer-toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);
+  padding:6px 4px;border-radius:5px;cursor:pointer;user-select:none;}
+.layer-toggle:hover{background:var(--panel2);color:var(--text);}
+.layer-toggle input{accent-color:var(--gold);width:13px;height:13px;flex:none;}
+.layer-toggle i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+@media (max-width:900px){.map-body{grid-template-columns:1fr;}}
+
+
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:stretch;}
+.ticker-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.ticker-hd{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px 1px var(--red);animation:blink 1.6s ease-in-out infinite;}
+.ticker-viewport{flex:1;min-height:600px;overflow:hidden;position:relative;padding:0 4px;
+  mask-image:linear-gradient(to bottom,transparent 0,black 24px,black calc(100% - 24px),transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,black 24px,black calc(100% - 24px),transparent 100%);}
+.ticker-track{display:flex;flex-direction:column;animation:tickerScroll 110s linear infinite;}
+.ticker-track.paused{animation-play-state:paused;}
+@keyframes tickerScroll{from{transform:translateY(0);}to{transform:translateY(-50%);}}
+.tick-item{padding:10px 12px;border-bottom:1px solid var(--border-soft);}
+.tick-item .tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;padding:1.5px 6px;border-radius:4px;margin-right:6px;color:#0a0e17;}
+.tick-item .txt{font-size:12px;line-height:1.45;color:var(--text);display:block;margin-top:5px;}
+.tick-item .meta{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);margin-top:5px;}
+.ticker-ftr{flex:none;padding:9px 16px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-faint);text-align:center;}
+.dw-select{margin-left:auto;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;}
+.dw-status{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin:-4px 0 10px;}
+@media (max-width:1180px){.main-grid{grid-template-columns:1fr;}}
+@media (prefers-reduced-motion: reduce){.ticker-track,.live-dot{animation:none !important;}}
+.country.focus{fill:#26598f;stroke:#6aa4dd;stroke-width:0.6;}
+.disputed-outline{fill:rgba(240,180,41,0.12);stroke:#f0b429;stroke-width:1.4;stroke-dasharray:4 3;}
+.state-line{fill:none;stroke:#8fb3d9;stroke-width:0.9;stroke-opacity:0.85;}
+.state-label{fill:#cfe3f5;font-size:11px;text-anchor:middle;paint-order:stroke;stroke:#0a0e17;stroke-width:3px;}
+.sea-label{fill:#7fb3d5;font-size:14px;font-style:italic;letter-spacing:.08em;text-anchor:middle;}
+.river-line{fill:none;stroke:#3f7fbf;stroke-width:1.3;stroke-opacity:0.85;}
+.place-dot{fill:#e8eef7;}
+.place-label{fill:#e8eef7;font-size:11px;paint-order:stroke;stroke:#0a0e17;stroke-width:3px;}
+.state-line.ne{fill:rgba(96,165,250,0.10);stroke:#7fb8ff;stroke-width:1.4;}
+.state-line.margin{stroke-dasharray:6 4;stroke:#64748b;fill:none;}
+.country.focus{fill:#1d3a5c;}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+  <div class="brand"><svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+  <circle cx="17" cy="17" r="15.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.55"/>
+  <circle cx="17" cy="17" r="10.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.75"/>
+  <circle cx="17" cy="17" r="2.6" fill="#c9a35c"/>
+  <path d="M17 1.5V8.5M17 25.5V32.5M1.5 17H8.5M25.5 17H32.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.85"/>
+</svg>
+    <div class="brand-text"><div class="brand-title">MALDIVES DASHBOARD</div>
+      <div class="brand-sub"The Maldives &amp; the seas around it &middot; Open-Source Intelligence</div></div>
+  </div>
+  <div class="search-wrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <circle cx="11" cy="11" r="7" stroke="#8b9bb4" stroke-width="2"/>
+  <path d="M21 21l-4.3-4.3" stroke="#8b9bb4" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="filterInput" type="text" placeholder="Filter dashboard (e.g. Malé, Gan, Maafaru, Thilafushi)&hellip;" autocomplete="off"/>
+  </div>
+  <div class="hdr-right">
+    <div class="window-toggle" id="windowToggle">
+      <button class="wt-btn active" data-window="72h">Last 72h</button>
+      <button class="wt-btn" data-window="all">All Time</button>
+    </div>
+    <span class="status-pill offline" id="statusPill"><span class="dot"></span><span id="statusPillText">Checking&hellip;</span></span>
+    <button class="icon-btn" id="plotBtn" title="Plot a location on the map"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <path d="M12 2C8 2 5 5.5 5 9.5C5 14.5 12 22 12 22S19 14.5 19 9.5C19 5.5 16 2 12 2Z" stroke="currentColor" stroke-width="1.8"/>
+  <circle cx="12" cy="9.5" r="2.3" fill="currentColor"/>
+</svg></button>
+    <button class="icon-btn" id="settingsBtn" title="API Keys"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/>
+  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6"/>
+</svg></button>
+    <button class="refresh-btn" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+  <path d="M21 12a9 9 0 11-2.6-6.4M21 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Refresh</span></button>
+    <div class="hdr-clock"><b id="snapClock">&mdash;</b><span id="snapDate">&nbsp;</span></div>
+  </div>
+</header>
+
+<div class="modal-backdrop" id="settingsBackdrop">
+  <div class="modal">
+    <h3>API Keys</h3>
+    <div class="modal-sub">Stored AES-256-GCM encrypted on this machine (data/secrets.enc), never sent anywhere
+      but this local server. GDELT, RSS, and USGS already work with zero keys - these three are optional,
+      for more sources.</div>
+    <div id="keyFields">Loading&hellip;</div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="saveKeysBtn">Save &amp; reconnect</button>
+      <button class="btn-secondary" id="closeSettingsBtn">Close</button>
+    </div>
+    <div class="modal-msg" id="settingsMsg"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="plotBackdrop">
+  <div class="modal">
+    <h3>Plot a location</h3>
+    <div class="modal-sub">Adds a marker at the coordinates you enter, with your remark - saved locally in
+      data/custom_markers.json on this machine, never sent anywhere else.</div>
+    <label>Label</label><input type="text" id="plotLabel" placeholder="e.g. Reported incident site"/>
+    <label>Remark / comment (optional)</label><input type="text" id="plotRemark" placeholder="e.g. Source, context, notes"/>
+    <label>Latitude</label><input type="text" id="plotLat" placeholder="e.g. 30.5"/>
+    <label>Longitude</label><input type="text" id="plotLon" placeholder="e.g. 114.3"/>
+    <div class="modal-actions">
+      <button class="btn-primary" id="plotAddBtn">Add marker</button>
+      <button class="btn-secondary" id="plotCloseBtn">Close</button>
+    </div>
+    <div class="modal-msg" id="plotMsg"></div>
+    <div id="customMarkersList" style="margin-top:14px;max-height:200px;overflow-y:auto;"></div>
+  </div>
+</div>
+  <div class="kpi-row" id="kpiRow">
+  <div class="kpi" style="--accent:var(--gold)"><div class="eyebrow">Map markers</div><div class="num" id="kpi-markers"><span class="skel" style="display:inline-block;width:30px;height:24px;"></span></div><div class="sub">plotted on the tactical map</div></div>
+  <div class="kpi" style="--accent:var(--amber)"><div class="eyebrow">Military signals</div><div class="num" id="kpi-military">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--cyan-h)"><div class="eyebrow">Economic &amp; trade</div><div class="num" id="kpi-economic">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--green)"><div class="eyebrow">Diplomatic events</div><div class="num" id="kpi-political">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--violet)"><div class="eyebrow">Hazard alerts</div><div class="num" id="kpi-hazard">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--red)"><div class="eyebrow">Dark-web claims (region)</div><div class="num" id="kpi-darkweb">&hellip;</div><div class="sub">leak-site, Telegram and Tor sources</div></div>
+</div>
+  <div class="main-grid">
+    <div class="left-col">
+  <div class="map-panel">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+    <span class="panel-title">Tactical Map &mdash; the Maldives and 100 km round the archipelago</span>
+    <span class="panel-count" id="count-markers">&hellip;</span></div>
+  <div class="map-body">
+    <div class="map-svg-wrap" id="mapWrap"><svg viewBox="0 0 1200 3954" xmlns="http://www.w3.org/2000/svg" id="mapSvg" role="img" aria-label="Tactical map of the Maldives and the seas within 100 km">
+  <defs>
+    <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c9a35c" stop-opacity="0.38"/><stop offset="100%" stop-color="#c9a35c" stop-opacity="0"/></linearGradient>
+    <radialGradient id="oceanGrad" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#0b1420"/>
+      <stop offset="100%" stop-color="#05080d"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="1200" height="3954" fill="url(#oceanGrad)"/>
+  <g class="countries"><path class="country focus" d="M816.2,1877.8L818.4,1879.7L818.4,1879.7L817.6,1879.4L816.5,1879.0L816.4,1878.8L816.1,1877.8L816.2,1877.8ZM797.5,1467.5L796.4,1469.0L796.4,1468.0L797.6,1467.4L797.5,1467.5ZM796.8,1475.9L795.5,1476.3L795.4,1476.3L797.6,1474.9L796.8,1475.9ZM783.3,1493.0L783.6,1493.9L783.5,1494.5L782.6,1494.9L781.9,1493.9L782.1,1493.3L782.8,1492.7L783.4,1491.8L783.3,1493.0ZM774.4,1102.8L771.7,1103.3L771.7,1103.3L773.1,1102.6L774.4,1102.8L774.4,1102.8ZM771.1,1501.3L770.7,1502.2L770.9,1503.2L770.9,1503.3L770.7,1503.9L770.2,1503.8L769.4,1503.6L769.3,1503.6L768.5,1502.1L769.1,1501.6L770.1,1501.6L771.1,1501.2L771.1,1501.3ZM769.5,1075.1L770.4,1078.4L770.0,1081.9L768.6,1085.2L768.6,1085.3L766.7,1074.2L767.4,1072.0L769.5,1075.1ZM767.4,1107.1L766.5,1107.8L764.9,1107.5L767.5,1107.1L767.4,1107.1ZM761.0,2020.4L759.3,2021.4L761.2,2018.8L761.0,2020.4ZM760.3,1504.3L760.2,1505.4L760.5,1506.3L760.4,1507.0L759.5,1507.3L758.7,1506.3L759.0,1505.8L759.6,1505.2L760.3,1504.3L760.3,1504.3ZM753.9,1512.8L752.5,1513.7L751.3,1513.5L751.2,1513.5L753.9,1512.8L753.9,1512.8ZM748.4,1130.6L746.3,1131.0L743.2,1130.1L743.2,1130.1L745.6,1128.8L748.1,1128.0L750.5,1127.7L752.8,1127.6L748.4,1130.6ZM750.1,2078.3L746.6,2082.6L747.0,2080.1L748.2,2078.9L749.4,2078.4L750.1,2078.3L750.1,2078.3ZM750.0,2427.3L750.0,2427.3L749.2,2427.9L747.9,2428.8L742.7,2432.1L740.3,2433.4L740.3,2431.7L740.8,2430.2L742.7,2427.1L750.0,2427.3ZM741.2,2081.2L740.3,2084.7L740.0,2083.7L740.2,2082.9L741.2,2081.1L741.2,2081.2ZM736.1,2442.4L736.1,2442.5L735.7,2441.1L736.0,2440.2L736.8,2439.4L737.8,2438.4L736.1,2442.4ZM736.6,1399.0L736.6,1400.0L736.8,1400.9L736.7,1401.6L735.8,1401.9L735.5,1401.6L735.1,1401.0L735.3,1400.4L736.0,1399.8L736.6,1398.9L736.6,1399.0ZM735.0,2508.5L733.7,2512.5L731.9,2516.0L731.8,2516.2L735.4,2502.9L736.8,2499.8L735.0,2508.5ZM736.4,1556.0L736.0,1559.5L734.9,1566.0L730.4,1577.9L725.7,1582.8L719.2,1586.6L709.4,1585.8L705.3,1583.9L686.7,1577.4L687.0,1575.2L719.7,1576.7L723.2,1574.7L725.5,1567.9L728.4,1558.4L733.7,1553.5L736.4,1556.0ZM734.9,2106.6L735.5,2107.1L735.8,2107.4L735.0,2108.4L735.0,2108.2L734.8,2106.5L734.9,2106.6ZM735.4,2486.2L735.4,2486.3L734.6,2485.1L734.6,2484.2L735.5,2481.8L735.4,2486.2ZM732.6,2463.1L731.6,2462.9L731.5,2462.9L732.3,2462.1L733.1,2461.3L732.6,2463.1ZM728.8,1059.2L727.3,1059.0L729.9,1058.6L728.8,1059.2ZM729.9,2525.5L728.5,2528.8L728.3,2529.5L727.9,2528.1L728.3,2527.2L728.6,2526.9L729.1,2526.4L730.0,2525.4L729.9,2525.5ZM721.7,1914.7L722.0,1915.0L722.6,1915.5L722.6,1915.6L722.7,1916.5L722.8,1916.6L721.6,1914.6L721.7,1914.7ZM719.5,2539.0L714.7,2542.7L714.7,2542.7L714.5,2542.6L714.4,2542.4L714.2,2542.3L714.1,2542.1L715.1,2541.0L716.0,2539.8L718.0,2538.4L722.4,2536.6L722.4,2536.6L719.5,2539.0ZM720.6,3132.5L718.7,3135.3L718.6,3135.4L717.8,3133.5L717.5,3133.1L717.8,3132.4L719.1,3132.6L720.6,3132.4L720.6,3132.5ZM718.3,1859.2L718.4,1859.2L717.4,1858.8L717.4,1858.7L717.3,1857.3L718.3,1859.2ZM718.2,1614.7L718.2,1614.8L716.7,1613.4L715.8,1612.6L715.7,1611.7L716.9,1611.2L718.1,1610.6L718.2,1614.7ZM714.5,1142.4L713.5,1143.1L713.5,1143.1L712.1,1142.7L714.5,1142.3L714.5,1142.4ZM711.9,3083.3L712.9,3086.9L711.2,3086.2L710.9,3085.4L711.4,3084.4L711.8,3083.2L711.9,3083.3ZM710.8,1357.9L711.0,1358.8L710.9,1359.4L710.0,1359.8L709.8,1359.5L709.3,1358.8L709.5,1358.2L710.2,1357.6L710.8,1356.7L710.8,1357.9ZM705.5,1676.8L702.6,1679.6L701.6,1680.2L702.3,1678.8L703.2,1678.1L705.5,1676.7L705.5,1676.8ZM702.4,1117.4L700.1,1117.8L700.0,1117.8L701.2,1117.2L701.2,1117.2L701.7,1117.3L702.5,1117.4L702.4,1117.4ZM700.2,2543.3L697.3,2545.7L696.3,2545.7L696.0,2544.4L695.7,2543.1L700.2,2543.3ZM698.0,1021.6L696.8,1021.2L696.8,1021.2L699.3,1020.8L698.0,1021.6ZM694.1,899.2L687.5,903.2L687.4,903.3L689.7,900.2L691.3,898.9L692.7,898.8L694.1,899.1L694.1,899.2ZM688.8,1255.8L689.8,1253.9L690.7,1253.7L691.8,1254.5L693.2,1255.2L688.8,1255.8ZM691.8,3411.0L692.6,3413.0L692.4,3415.8L689.7,3413.4L688.6,3411.4L688.3,3409.4L688.5,3407.3L691.8,3411.0ZM691.7,1685.6L691.6,1686.3L689.7,1687.2L689.6,1687.2L691.8,1685.5L691.7,1685.6ZM688.4,1716.5L687.6,1717.4L687.2,1717.8L686.8,1717.0L687.2,1715.7L687.8,1715.5L688.6,1715.7L689.2,1715.8L688.4,1716.5ZM685.6,870.3L685.4,871.4L685.4,871.4L685.4,872.4L685.4,873.1L684.5,873.6L683.2,872.1L683.6,871.4L684.6,871.0L685.6,870.2L685.6,870.3ZM683.2,1604.6L682.7,1605.4L681.8,1605.6L681.7,1605.6L683.2,1604.5L683.2,1604.6ZM675.9,1393.0L675.9,1394.1L676.2,1395.0L676.1,1395.6L675.1,1396.0L674.4,1395.1L674.7,1394.4L675.4,1393.9L675.9,1392.9L675.9,1393.0ZM674.2,2551.6L674.6,2553.4L675.4,2554.9L675.0,2555.9L674.3,2556.0L671.8,2556.2L672.0,2554.6L672.0,2554.6L672.1,2554.4L672.7,2553.5L673.7,2552.6L674.2,2551.5L674.2,2551.6ZM672.8,1095.2L673.3,1096.2L674.1,1097.0L674.3,1097.6L673.6,1097.9L672.3,1097.2L672.2,1096.6L672.7,1095.9L672.8,1095.1L672.8,1095.2ZM670.2,2154.6L670.7,2152.1L671.7,2150.9L673.0,2150.5L673.7,2150.4L670.2,2154.6ZM671.9,851.2L668.3,849.5L667.5,848.4L669.6,846.1L671.9,851.2ZM670.7,941.7L665.9,950.8L665.9,950.7L665.6,950.6L665.6,950.6L665.5,950.6L666.7,947.7L670.9,941.4L670.7,941.7ZM668.9,3029.5L668.9,3030.5L668.7,3031.0L668.6,3031.0L667.9,3031.0L667.4,3029.6L667.7,3029.0L668.6,3028.8L669.2,3028.4L668.9,3029.5ZM668.8,2460.5L668.5,2459.8L668.8,2458.7L668.8,2460.5ZM666.6,918.0L666.7,919.2L667.4,920.2L667.5,921.2L667.5,921.2L665.9,922.3L664.3,921.0L664.7,920.1L665.7,919.2L666.6,917.9L666.6,918.0ZM665.6,3174.4L661.7,3176.5L662.3,3174.1L663.4,3173.7L664.5,3174.1L665.6,3174.4L665.6,3174.4ZM664.6,1462.4L663.2,1461.7L663.2,1461.0L663.2,1461.0L663.8,1460.0L664.4,1458.7L664.6,1462.4ZM659.8,2557.8L664.2,2558.8L662.0,2561.2L661.1,2561.1L661.1,2561.1L660.6,2559.5L659.8,2557.7L659.8,2557.8ZM662.8,2979.8L662.8,2980.8L662.6,2981.4L662.2,2981.3L661.8,2981.2L661.4,2979.8L661.8,2979.3L661.8,2979.3L662.2,2979.2L662.5,2979.1L663.1,2978.7L662.8,2979.8ZM658.2,2298.2L659.9,2302.7L660.2,2303.6L660.6,2309.2L658.8,2314.4L658.7,2314.5L655.2,2296.5L655.3,2293.1L658.2,2298.2ZM658.7,1053.9L658.8,1055.3L657.9,1055.9L657.8,1056.0L658.7,1053.8L658.7,1053.9ZM658.1,2102.9L658.6,2103.7L658.8,2104.2L658.0,2104.6L658.0,2104.6L656.6,2103.6L656.6,2103.1L657.3,2102.6L657.8,2102.0L658.1,2102.9ZM655.2,2944.1L655.0,2944.9L655.0,2945.1L655.0,2945.9L654.9,2946.3L654.8,2946.6L654.5,2946.8L654.1,2947.0L654.1,2947.0L653.6,2945.6L653.8,2944.9L654.6,2944.5L655.2,2944.1L655.2,2944.1ZM654.7,2154.5L655.0,2155.3L655.0,2156.0L654.2,2156.5L654.2,2156.5L653.0,2154.6L653.3,2153.9L654.2,2153.7L655.0,2153.4L654.7,2154.5ZM651.3,1068.7L651.2,1068.7L652.4,1067.9L653.7,1068.3L651.3,1068.7ZM651.4,1675.7L650.0,1676.8L650.0,1676.3L651.5,1675.7L651.4,1675.7ZM651.1,2329.9L651.0,2331.2L650.5,2331.9L650.4,2332.1L651.2,2329.6L651.1,2329.9ZM643.2,1093.3L643.2,1093.3L644.4,1093.2L644.4,1093.2L644.5,1093.2L645.3,1093.2L644.8,1094.3L640.9,1094.8L640.9,1094.8L640.3,1093.7L640.9,1093.3L642.0,1093.2L642.5,1092.7L643.2,1093.3ZM641.3,2476.6L642.4,2477.1L642.7,2477.7L640.7,2479.1L639.5,2478.3L639.6,2477.6L640.2,2476.8L640.2,2475.7L641.3,2476.6ZM639.4,2269.8L639.4,2269.8L638.8,2269.4L638.0,2268.7L638.0,2268.7L637.9,2267.7L638.6,2266.5L639.2,2265.0L639.4,2269.8ZM621.1,756.4L620.0,760.8L618.9,759.1L619.1,758.2L620.1,757.4L621.1,756.4L621.1,756.4ZM620.9,769.7L620.3,770.7L620.0,771.5L619.7,772.1L618.9,772.3L618.8,772.3L618.9,771.1L619.4,770.5L620.1,770.2L620.9,769.7L620.9,769.7ZM613.4,788.4L611.5,789.7L611.3,789.8L612.2,788.8L613.5,788.4L613.4,788.4ZM610.1,2517.8L610.2,2515.6L610.9,2515.3L611.6,2515.6L612.0,2515.8L613.4,2516.3L610.1,2517.8ZM612.9,799.9L612.2,801.4L610.8,801.3L612.9,799.8L612.9,799.9ZM610.5,3539.8L607.9,3537.0L607.1,3533.7L608.2,3530.5L611.6,3527.8L612.0,3529.0L611.8,3530.0L611.4,3530.9L611.4,3532.2L610.5,3539.8ZM609.4,737.1L610.0,738.1L610.1,739.1L608.7,740.2L607.1,738.9L607.4,738.0L608.5,737.1L609.2,735.8L609.4,737.1ZM603.4,3554.4L603.2,3550.2L604.5,3546.4L606.5,3544.8L608.6,3547.3L603.4,3554.4ZM600.6,779.9L600.0,781.0L598.4,781.3L600.6,779.9L600.6,779.9ZM600.0,763.4L598.0,764.8L598.7,763.8L600.0,763.4L600.0,763.4ZM599.4,3193.9L599.3,3193.9L597.4,3196.2L596.7,3196.1L596.4,3194.7L595.9,3192.9L599.4,3193.9ZM598.4,713.3L597.6,715.5L596.0,716.6L595.8,716.7L596.1,716.5L598.4,713.2L598.4,713.3ZM598.0,457.9L597.6,463.6L595.8,469.1L593.9,471.6L592.7,468.3L593.0,464.5L594.3,460.7L596.0,458.0L598.0,457.9L598.0,457.9ZM592.7,3567.6L591.9,3569.0L590.8,3570.1L588.7,3570.7L589.0,3568.4L590.2,3567.3L593.9,3566.0L592.7,3567.6ZM591.1,699.9L591.5,701.0L592.0,701.2L592.4,701.4L593.0,702.0L592.7,703.6L590.3,703.1L590.2,703.0L589.9,702.3L590.6,701.2L591.1,699.9L591.1,699.9ZM590.1,444.5L589.8,444.6L589.6,444.6L589.5,444.6L589.4,444.6L589.2,444.5L589.0,444.3L588.7,440.4L589.0,437.8L589.9,436.4L591.7,436.3L590.1,444.5ZM591.2,494.9L588.0,497.1L585.7,497.8L584.5,496.8L584.8,493.9L591.2,494.9ZM586.1,691.0L585.6,691.7L585.0,692.1L584.2,691.8L584.5,690.7L585.2,690.4L586.1,690.5L587.1,690.3L586.1,691.0ZM581.0,3573.1L578.2,3573.0L577.3,3572.3L577.1,3570.3L581.0,3573.1ZM577.7,511.7L578.2,512.3L578.2,512.3L578.2,513.3L578.6,514.5L573.1,527.2L569.8,532.8L564.5,537.0L564.5,537.1L566.2,530.5L572.9,519.4L575.8,511.9L577.7,511.7ZM569.2,2246.8L568.1,2246.8L568.1,2246.8L569.9,2245.6L569.2,2246.8ZM568.8,489.3L568.4,490.1L568.0,490.6L567.1,490.2L567.5,488.2L568.1,488.0L568.9,488.4L569.6,488.6L568.8,489.3ZM564.4,1144.1L563.1,1144.7L564.4,1143.3L564.4,1144.1ZM562.2,717.7L560.9,717.9L560.9,717.9L563.1,716.5L562.2,717.7ZM562.3,3564.0L561.0,3563.3L560.8,3562.4L561.0,3561.3L561.2,3559.8L562.3,3564.0ZM561.4,697.9L559.5,699.2L559.4,699.3L560.1,698.4L561.5,697.8L561.4,697.9ZM558.2,2391.2L559.8,2393.6L557.4,2393.6L557.0,2392.9L557.4,2391.7L557.6,2390.4L558.2,2391.2ZM553.3,3539.5L556.0,3543.8L557.9,3548.9L558.9,3553.7L555.8,3553.7L549.1,3538.7L547.6,3531.1L553.3,3528.3L553.3,3531.4L550.7,3531.6L550.3,3532.7L550.7,3534.5L550.7,3534.5L550.2,3536.7L553.3,3539.5ZM556.6,1121.2L555.2,1122.6L555.2,1121.9L556.7,1121.2L556.6,1121.2ZM553.2,1172.6L554.3,1173.1L555.7,1173.7L555.6,1173.7L554.3,1173.4L553.0,1172.6L553.2,1172.6ZM553.9,467.9L554.1,468.8L554.2,469.3L554.3,469.4L553.3,469.7L552.3,468.1L552.5,467.4L553.4,467.2L554.1,466.8L553.9,467.9ZM553.0,544.9L552.5,546.4L551.7,547.4L549.9,548.0L549.9,548.0L550.2,544.8L551.3,543.7L554.0,543.3L553.0,544.9ZM550.8,3199.1L552.3,3200.0L553.0,3201.3L552.5,3203.8L552.4,3203.8L550.8,3202.6L550.4,3201.6L550.2,3201.2L550.2,3201.0L549.9,3199.6L549.4,3197.8L550.8,3199.1ZM552.9,2395.8L552.5,2396.7L552.5,2397.6L552.2,2398.1L551.1,2397.7L550.8,2396.6L551.2,2396.2L552.0,2396.1L552.9,2395.8L552.9,2395.8ZM550.8,485.1L550.0,485.7L549.6,486.5L549.1,486.9L548.6,486.8L548.2,486.6L548.7,484.7L549.3,484.4L550.1,484.8L550.1,484.8L550.8,485.0L550.8,485.1ZM547.8,1178.5L546.5,1178.8L546.4,1178.8L547.9,1177.4L547.8,1178.5ZM544.7,707.6L544.0,708.8L542.8,709.0L542.6,709.0L544.8,707.6L544.7,707.6ZM536.0,563.3L536.2,560.9L537.0,560.3L538.0,560.4L539.2,560.5L536.0,563.3ZM530.7,1188.9L531.0,1190.1L531.6,1191.0L531.6,1191.6L530.1,1191.7L529.1,1190.7L529.4,1190.1L530.2,1189.7L530.7,1188.9L530.7,1188.9ZM529.7,655.3L528.5,656.3L528.4,656.4L530.7,653.2L529.7,655.3ZM528.2,1979.2L528.2,1979.3L529.1,1979.5L529.6,1979.8L528.9,1981.1L527.1,1981.3L526.9,1980.8L527.3,1979.7L527.7,1978.4L528.2,1979.2ZM528.2,579.9L527.8,580.8L527.4,581.2L526.5,580.8L526.9,578.9L527.6,578.6L527.6,578.6L528.4,579.1L529.1,579.3L528.2,579.9ZM528.9,1193.6L528.4,1194.8L527.5,1195.0L528.9,1193.6L528.9,1193.6ZM527.3,2404.7L526.7,2404.8L526.0,2404.8L526.1,2404.8L528.3,2404.0L527.3,2404.7ZM525.3,3180.8L526.8,3185.0L526.8,3185.0L525.1,3184.4L524.9,3183.9L524.8,3183.4L524.9,3182.8L525.1,3182.2L525.1,3182.1L525.3,3180.7L525.3,3180.8ZM525.8,522.9L525.6,524.0L525.6,524.1L525.9,524.8L525.9,525.4L525.0,525.8L524.7,525.3L523.9,524.2L524.3,523.5L525.1,523.3L525.8,522.9L525.8,522.9ZM523.5,1959.0L524.0,1959.8L524.8,1960.5L525.0,1961.1L523.5,1962.0L523.4,1962.0L522.3,1961.5L522.4,1960.8L523.0,1960.0L523.4,1959.0L523.5,1959.0ZM524.7,742.9L522.7,744.3L522.6,744.3L523.2,743.4L524.7,742.9L524.7,742.9ZM523.6,2167.0L523.6,2167.0L521.9,2169.8L520.8,2170.1L519.6,2168.4L519.5,2168.4L523.6,2167.0ZM523.0,595.6L522.8,596.6L523.1,597.5L523.2,598.1L523.2,598.1L522.3,598.4L522.0,597.9L521.3,596.8L521.5,596.1L522.4,595.9L523.0,595.5L523.0,595.6ZM519.7,683.8L520.6,684.1L521.0,684.6L520.7,685.4L518.7,685.1L518.4,684.4L518.9,683.6L519.2,682.9L519.7,683.8ZM518.4,990.5L517.8,991.3L517.6,992.1L517.3,992.7L516.5,993.0L516.4,993.0L516.0,991.3L516.4,990.8L517.4,990.8L518.5,990.4L518.4,990.5ZM516.5,1042.4L516.3,1043.2L516.0,1043.8L515.2,1044.1L515.2,1044.1L514.7,1042.7L514.7,1042.4L515.1,1041.9L516.1,1041.9L517.2,1041.6L516.5,1042.4ZM516.5,2084.1L514.7,2085.0L514.5,2084.8L514.1,2084.5L514.1,2083.3L514.1,2083.3L513.9,2081.7L516.5,2084.1ZM516.1,967.0L515.8,967.8L515.6,968.4L514.7,968.7L514.2,967.0L514.7,966.6L515.6,966.5L516.7,966.2L516.1,967.0ZM512.3,952.2L512.0,953.2L511.7,953.9L510.6,953.9L510.2,951.9L510.8,951.4L510.8,951.4L511.1,951.4L511.9,951.5L513.0,951.3L512.3,952.2ZM512.9,1053.8L512.4,1054.5L511.8,1056.1L511.1,1056.6L510.3,1054.7L510.3,1054.6L510.7,1054.1L511.8,1054.1L513.0,1053.8L512.9,1053.8ZM509.1,489.4L508.3,490.1L507.8,490.9L507.5,491.4L506.6,491.0L506.6,491.0L506.9,489.0L507.7,488.8L508.4,489.2L509.2,489.4L509.1,489.4ZM504.1,3167.0L505.0,3167.2L505.2,3167.4L505.4,3167.6L504.5,3168.5L504.5,3168.5L502.6,3167.5L502.5,3166.9L503.6,3166.2L504.1,3167.0ZM505.0,929.9L503.7,931.2L503.7,931.2L505.4,927.8L505.0,929.9ZM501.4,2017.5L501.9,2018.3L502.8,2018.9L503.0,2019.6L501.5,2020.5L500.2,2019.9L500.3,2019.3L501.0,2018.5L501.4,2017.5L501.4,2017.5ZM502.7,413.2L503.4,418.8L501.7,416.7L501.7,415.3L501.7,415.2L502.7,413.2L502.7,413.2ZM502.2,1286.3L498.2,1292.3L498.2,1292.4L498.4,1288.3L499.5,1286.7L500.9,1286.4L502.2,1286.3L502.2,1286.3ZM501.2,910.3L500.6,914.0L500.6,914.0L499.5,913.0L498.9,912.4L498.9,911.6L500.1,911.0L501.2,910.3L501.2,910.3ZM501.0,485.8L501.2,486.7L501.2,486.7L501.3,487.3L500.4,487.6L500.4,487.6L499.3,486.0L499.6,485.4L500.5,485.1L501.2,484.8L501.0,485.8ZM498.5,1544.1L499.3,1544.8L500.1,1545.2L500.6,1545.6L500.6,1546.4L499.3,1546.4L498.9,1545.9L498.9,1545.0L498.5,1544.1L498.5,1544.1ZM496.0,889.6L497.1,895.2L495.5,893.9L495.2,892.6L495.9,889.5L496.0,889.6ZM495.7,482.2L495.2,482.9L494.9,483.4L494.1,483.1L494.0,483.1L493.9,483.1L494.3,481.2L495.1,480.8L495.8,481.3L496.5,481.6L495.7,482.2ZM494.6,605.7L494.2,606.5L493.8,607.0L492.9,606.6L493.3,604.6L493.9,604.4L493.9,604.4L494.7,604.8L495.4,605.0L494.6,605.7ZM493.2,3126.1L494.3,3129.8L494.4,3129.9L493.0,3128.7L492.7,3127.8L493.1,3126.9L493.2,3126.1L493.2,3126.1ZM493.7,1545.5L493.6,1545.5L491.9,1545.9L491.9,1545.9L490.6,1545.5L488.1,1543.9L493.7,1545.5ZM492.6,1480.1L489.7,1479.8L489.0,1479.7L487.4,1476.2L493.0,1473.5L492.6,1480.1ZM491.6,1762.9L492.4,1763.5L492.4,1764.1L490.9,1764.9L489.6,1764.2L489.8,1763.6L490.5,1763.0L491.0,1762.0L491.6,1762.9ZM490.2,690.8L490.8,691.6L490.9,691.6L491.7,692.0L491.8,692.2L492.1,692.4L491.7,693.3L489.8,692.9L489.5,692.3L490.0,691.4L490.2,690.7L490.2,690.8ZM491.3,1100.1L490.1,1100.4L491.6,1099.0L491.3,1100.1ZM490.6,401.4L490.0,403.7L489.7,402.4L490.6,401.4L490.6,401.4ZM488.9,1747.3L489.5,1747.7L489.7,1747.9L489.8,1748.4L488.1,1749.2L488.0,1749.1L486.9,1748.5L487.1,1747.9L487.9,1747.3L488.3,1746.3L488.9,1747.3ZM488.4,2360.6L488.4,2360.6L487.1,2360.3L489.3,2359.6L488.4,2360.6ZM488.4,1720.7L488.7,1721.0L489.2,1721.4L489.3,1721.9L487.7,1722.7L486.5,1721.9L486.7,1721.4L487.4,1720.7L487.9,1719.8L488.4,1720.7ZM487.2,1810.0L487.8,1810.4L488.1,1810.6L488.2,1811.2L486.6,1812.0L485.3,1811.2L485.5,1810.6L486.2,1810.0L486.7,1809.1L487.2,1810.0ZM487.5,1052.0L486.9,1052.8L486.7,1053.6L486.3,1054.2L485.5,1054.4L485.0,1052.8L485.5,1052.3L486.5,1052.3L487.5,1051.9L487.5,1052.0ZM485.9,3091.7L484.5,3090.0L484.5,3089.1L486.1,3088.0L485.9,3091.7ZM482.3,851.6L480.5,849.0L480.8,847.7L482.9,846.6L482.3,851.6ZM480.5,603.4L481.3,603.8L481.8,604.2L481.4,605.1L479.5,604.7L479.3,604.0L479.7,603.3L479.9,602.5L480.5,603.4ZM474.4,1840.7L474.3,1840.7L476.0,1837.7L477.7,1836.4L479.5,1836.3L481.2,1836.5L474.4,1840.7ZM481.1,1228.6L480.9,1229.4L480.9,1229.5L480.3,1229.7L479.8,1229.9L479.8,1229.9L481.1,1228.5L481.1,1228.6ZM480.5,2342.7L478.7,2341.3L478.6,2340.2L479.4,2339.3L480.1,2338.0L480.5,2342.7ZM480.8,442.1L480.9,443.4L480.2,444.3L480.8,441.9L480.8,442.1ZM479.1,1284.8L479.1,1284.8L478.3,1285.3L477.0,1285.0L476.9,1285.0L479.1,1284.8ZM476.9,521.8L476.4,522.6L476.0,523.1L475.2,522.7L475.2,522.7L475.6,520.8L476.2,520.5L477.0,520.9L477.7,521.1L476.9,521.8ZM476.4,841.6L475.6,842.3L475.5,843.2L475.2,843.6L474.7,843.3L474.0,843.0L474.0,841.2L474.5,841.0L475.3,841.4L476.4,841.6L476.4,841.6ZM475.5,386.6L475.1,390.4L472.9,388.1L472.9,387.3L474.2,387.0L475.5,386.6L475.5,386.6ZM473.7,1230.8L473.6,1230.9L474.0,1230.0L475.1,1229.5L473.7,1230.8ZM471.9,654.6L472.7,655.0L472.9,655.2L473.2,655.4L473.2,655.5L472.8,656.3L470.9,655.9L470.9,655.8L470.6,655.3L471.0,654.5L471.3,653.7L471.9,654.6ZM470.5,2193.3L471.6,2193.3L472.1,2193.8L471.3,2195.4L469.9,2195.2L469.7,2194.7L469.8,2193.8L469.5,2192.8L470.5,2193.3ZM470.7,2029.1L471.2,2029.2L471.5,2029.3L472.0,2029.7L471.4,2030.9L469.5,2031.1L469.3,2030.6L469.8,2029.6L470.2,2028.3L470.7,2029.1ZM467.8,649.7L468.6,650.1L468.9,650.4L469.0,650.5L469.0,650.6L468.6,651.4L466.8,651.0L466.7,650.9L466.4,650.4L466.9,649.6L467.1,648.8L467.8,649.7ZM467.0,429.5L466.4,430.5L466.4,430.5L467.0,428.2L467.0,429.5ZM464.0,381.2L464.0,382.1L463.1,382.9L463.7,380.6L464.0,381.2ZM462.8,1041.9L462.5,1042.7L462.2,1043.4L461.4,1043.6L460.8,1041.9L461.2,1041.5L462.2,1041.4L463.4,1041.1L462.8,1041.9ZM458.7,2192.1L458.7,2192.2L456.1,2190.9L456.0,2190.0L457.1,2189.0L458.3,2187.8L458.7,2192.1ZM457.3,2075.3L456.3,2078.6L455.2,2079.7L455.2,2078.6L457.3,2075.2L457.3,2075.3ZM453.6,1146.0L453.2,1147.0L452.3,1147.4L452.2,1147.4L453.6,1146.0L453.6,1146.0ZM442.8,1935.4L443.7,1935.6L443.8,1935.8L444.1,1936.0L443.4,1937.3L441.6,1937.4L441.5,1937.4L441.4,1936.9L441.9,1935.9L442.3,1934.6L442.8,1935.4ZM441.6,1853.5L442.1,1854.4L442.9,1855.0L443.1,1855.6L443.0,1855.6L441.4,1856.3L440.2,1855.6L440.1,1855.6L440.4,1855.0L441.1,1854.4L441.5,1853.5L441.6,1853.5ZM426.2,1850.9L426.6,1851.5L426.7,1851.8L427.7,1852.4L428.2,1852.9L427.2,1853.3L425.1,1853.3L424.9,1852.8L424.9,1852.8L425.7,1851.9L426.1,1850.8L426.2,1850.9ZM389.4,1652.6L389.9,1653.0L390.2,1653.3L390.5,1653.6L390.7,1653.8L390.6,1653.8L389.8,1654.4L387.7,1653.7L387.7,1653.7L387.6,1653.2L387.6,1653.2L388.4,1652.6L389.2,1651.6L389.4,1652.6ZM384.8,1764.9L385.4,1766.3L386.4,1767.2L386.8,1768.1L386.8,1768.1L385.7,1769.7L384.8,1769.2L383.7,1768.5L383.7,1767.3L384.4,1766.2L384.8,1764.8L384.8,1764.9ZM384.9,665.4L384.1,666.1L383.4,667.1L382.9,667.4L382.5,666.7L382.9,665.3L383.6,665.1L384.2,665.3L385.0,665.3L384.9,665.4Z" /></g>
+  <g class="disputed-overlay"></g>
+  <g class="disputed-overlay"></g>
+  <g class="rivers-layer"></g>
+  <g class="states-layer"></g>
+  <g class="places-layer"><circle class="place-dot" cx="718.4" cy="1582.6" r="2.5"/><text class="place-label" x="724.4" y="1585.6">Malé</text>
+<circle class="place-dot" cx="730.5" cy="1566.6" r="2.5"/><text class="place-label" x="736.5" y="1569.6">Hulhumalé</text>
+<circle class="place-dot" cx="544.4" cy="3536.8" r="2.5"/><text class="place-label" x="550.4" y="3539.8">Hithadhoo (Addu City)</text>
+<circle class="place-dot" cx="541.8" cy="1200.7" r="2.5"/><text class="place-label" x="547.8" y="1203.7">Eydhafushi (Baa)</text>
+<circle class="place-dot" cx="538.5" cy="575.7" r="2.5"/><text class="place-label" x="544.5" y="578.7">Kulhudhuffushi (Haa Dhaalu)</text>
+<circle class="place-dot" cx="688.5" cy="3418.0" r="2.5"/><text class="place-label" x="694.5" y="3421.0">Fuvahmulah</text>
+<circle class="place-dot" cx="724.0" cy="2529.8" r="2.5"/><text class="place-label" x="730.0" y="2532.8">Kadhdhoo (Laamu)</text>
+<circle class="place-dot" cx="701.6" cy="908.7" r="2.5"/><text class="place-label" x="707.6" y="911.7">Maafaru (Noonu)</text>
+<circle class="place-dot" cx="627.9" cy="767.5" r="2.5"/><text class="place-label" x="633.9" y="770.5">Funadhoo (Shaviyani)</text></g>
+  <g class="sea-layer"><text class="sea-label" x="285.5" y="2062.5">Indian Ocean</text>
+<text class="sea-label" x="632.9" y="76.6">Eight Degree Channel</text></g>
+  <g id="radarSweep" data-cx="600.0" data-cy="1976.9" transform="rotate(0 600.0 1976.9)"><path d="M 600.0 1976.9 L 518.4 1514.0 A 470 470 0 0 1 849.1 1578.3 Z" fill="url(#sweepGrad)"/></g>
+  <g class="markers" id="markerLayer"></g>
+</svg><div class="map-tip" id="mapTip"></div></div>
+    <div class="layers-panel">
+      <div class="layers-hd">LAYERS</div>
+      <label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="capital" checked/><i style="background:#c9a35c"></i>Capital, administrative centre or island town</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="foreign_base" checked/><i style="background:#3b82f6"></i>Chinese-linked facility or visit (Chinese-financed, Chinese-built or port call)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="navy_base" checked/><i style="background:#f97316"></i>MNDF Coast Guard base (the Maldives has no navy)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="cantonment" checked/><i style="background:#94a3b8"></i>MNDF headquarters or regional headquarters</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="pipeline" checked/><i style="background:#a78bfa"></i>Fuel, energy, water, cable or planned utility site</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="cyber_hub" checked/><i style="background:#e879f9"></i>National cyber agency or CERT</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="chokepoint" checked/><i style="background:#22d3ee"></i>Sea passage or sea lane</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="hazard" checked/><i style="background:#fbbf24"></i>Live earthquake (USGS)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="custom" checked/><i style="background:#ffffff"></i>Your plotted marker</label>
+      <div class="layers-hd" style="margin-top:8px;">INFRASTRUCTURE</div>
+      <label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="air_base" checked/><i style="background:#c4b5fd"></i>MNDF Air Corps base or planned air base</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="airport" checked/><i style="background:#38bdf8"></i>Civil airport (dataset; domestic and international)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="seaport" checked/><i style="background:#22c55e"></i>Seaport or port relocation</label>
+      <div class="infra-note" id="infraNote">&hellip;</div>
+      <div class="infra-note"><b>Map basis:</b> Lambert azimuthal equal-area projection centred on the archipelago, drawn from Natural Earth 10 m boundaries. The frame is the Maldives plus 100 km on every side (about 71.8 to 74.7 degrees east and 1.6 degrees south to 8.0 degrees north). The Maldives is shaded. Nothing outside the archipelago is plotted, and neighbouring land is not drawn. The Maldives has no nuclear power plant, nuclear storage site, missile base, space-launch site or submarine base in the sources reviewed; none is plotted. Most positions are approximate; each tooltip gives its source and whether it is verified in this build. Reported events and claims are attributed. Events reflect reports up to 10 October 2026.</div>
+    </div>
+  </div>
+</div>
+  <div class="offline-banner" id="offlineBanner"></div>
+  <div class="panel-row"><div class="panel" data-cat="geo">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--green);color:var(--green)"></span>
+      <span class="panel-title">Geopolitical & Diplomatic</span><span class="panel-count" id="count-geo">&hellip;</span></div>
+      <div class="panel-items" id="items-geo"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="milops">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--amber);color:var(--amber)"></span>
+      <span class="panel-title">Military Operations & Force Posture</span><span class="panel-count" id="count-milops">&hellip;</span></div>
+      <div class="panel-items" id="items-milops"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="arms">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--magenta);color:var(--magenta)"></span>
+      <span class="panel-title">Strategic Arms & Nuclear Program</span><span class="panel-count" id="count-arms">&hellip;</span></div>
+      <div class="panel-items" id="items-arms"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row"><div class="panel" data-cat="naval">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Naval & Maritime Security</span><span class="panel-count" id="count-naval">&hellip;</span></div>
+      <div class="panel-items" id="items-naval"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="scs">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Maritime Chokepoints & Sea Lanes</span><span class="panel-count" id="count-scs">&hellip;</span></div>
+      <div class="panel-items" id="items-scs"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="air">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--violet);color:var(--violet)"></span>
+      <span class="panel-title">Air Force & Aviation</span><span class="panel-count" id="count-air">&hellip;</span></div>
+      <div class="panel-items" id="items-air"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row"><div class="panel" data-cat="space">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Space Tech & Aerospace</span><span class="panel-count" id="count-space">&hellip;</span></div>
+      <div class="panel-items" id="items-space"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="tech">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+      <span class="panel-title">Critical Tech & AI Governance</span><span class="panel-count" id="count-tech">&hellip;</span></div>
+      <div class="panel-items" id="items-tech"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="cyber">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--red);color:var(--red)"></span>
+      <span class="panel-title">Cyber Espionage & APTs</span><span class="panel-count" id="count-cyber">&hellip;</span></div>
+      <div class="panel-items" id="items-cyber"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:1fr;"><div class="panel darkweb-panel" data-cat="darkweb" style="grid-column:1/-1;">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--red);color:var(--red)"></span>
+  <span class="panel-title">Darkweb &amp; Threat Intel</span><span class="panel-count" id="count-darkweb">&hellip;</span>
+  <select id="darkwebFilter" class="dw-select"><option value="all">All claims</option><option value="region">Regional victims only</option></select></div>
+  <div class="dw-status" id="darkwebStatus"></div>
+  <div class="panel-items" id="items-darkweb" style="max-height:460px;overflow-y:auto;"><div class="skel" style="height:60px;"></div></div>
+  <div class="infra-note"><b>Sources:</b> Ransomware.live (leak-site claims - group claims, not verified facts); Telegram threat-intel channels; and dark-web RSS sources reached through Tor that you verify yourself (data/onion_sources.json).
+  <br/><b>To read onion sources</b> you need Tor on this PC: open <b>Tor Browser</b> (it listens on port 9150) or install and start the <b>Tor service</b> (port 9050). Keep it running, then press Refresh. Nothing is needed for the clear-web and Telegram sources. This dashboard never opens .onion pages in a browser and does not search or crawl the dark web.</div>
+</div></div>
+<div class="panel-row"><div class="panel" data-cat="econ">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Economic & Trade (energy, shipping)</span><span class="panel-count" id="count-econ">&hellip;</span></div>
+      <div class="panel-items" id="items-econ"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="mss">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--amber);color:var(--amber)"></span>
+      <span class="panel-title">Internal Security & Intelligence Operations</span><span class="panel-count" id="count-mss">&hellip;</span></div>
+      <div class="panel-items" id="items-mss"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="social">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+      <span class="panel-title">Social Pulse & Public Sentiment</span><span class="panel-count" id="count-social">&hellip;</span></div>
+      <div class="panel-items" id="items-social"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:repeat(2,1fr);"><div class="panel" data-cat="wellbeing">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--magenta);color:var(--magenta)"></span>
+      <span class="panel-title">Happiness & Wellbeing Indices</span><span class="panel-count" id="count-wellbeing">&hellip;</span></div>
+      <div style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;">
+  <b style="color:var(--text);">World Happiness Report 2026:</b> the Maldives' rank was not verified in this build. Check the report directly.</div>
+  <div class="meta" style="font-size:10.5px;color:var(--text-faint);">Annual report - static reference, not a live feed.</div><div class="panel-items" id="items-wellbeing"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="hazard">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--violet);color:var(--violet)"></span>
+      <span class="panel-title">Natural Hazards & Environmental Risks</span><span class="panel-count" id="count-hazard">&hellip;</span></div>
+      <div class="panel-items" id="items-hazard"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:1fr;"><div class="panel">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--text-faint);color:var(--text-faint)"></span>
+  <span class="panel-title">Connector Status</span></div>
+  <div class="connector-strip" id="connectorStrip"><div class="skel" style="height:20px;width:100%;"></div></div>
+  <div class="item" style="margin-top:12px;border-left-color:var(--gold-soft);">
+    <div class="txt" id="methodNote">Loading&hellip;</div>
+  </div>
+</div></div>
+</div>
+    <aside class="ticker-panel">
+  <div class="ticker-hd"><span class="live-dot"></span><span class="panel-title">Latest News (running)</span>
+    <span class="panel-count" id="count-ticker">&hellip;</span></div>
+  <div class="ticker-viewport" id="tickerViewport"><div class="ticker-track" id="tickerTrack">
+    <div class="skel" style="height:60px;margin:10px;"></div></div></div>
+  <div class="ticker-ftr">Hover to pause &middot; moves bottom&rarr;top &middot; unlocated news only (located news is on the map)</div>
+</aside>
+  </div>
+  <div class="dash-footer">
+  <div><span class="brandline">MALDIVES DASHBOARD</span> &middot; By Aryan &middot; @EPureNest</div>
+  <div id="footerNote">Loading&hellip;</div>
+</div>
+</div>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
